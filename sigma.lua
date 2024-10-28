@@ -4,12 +4,6 @@ local Players = game:GetService('Players')
 local TweenService = game:GetService('TweenService')
 local RunService = game:GetService('RunService')
 
-if game.gameID == "2746687316" then
-    print("[SIGMA]: SigmaLoader V1: SIgma.Aim")
-else
-    error("[SIGMA]: wrong placee")
-end
-
 local Client = {}
 for _, v in next, getgc(true) do
     if (type(v) == 'table') then
