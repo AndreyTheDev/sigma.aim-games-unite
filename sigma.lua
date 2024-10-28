@@ -55,6 +55,7 @@ end
 local botEnabled = true
 local espEnabled = true
 local espObjects = {}
+local currentTarget = nil
 
 local function sendNotification(title, text, duration)
     local bindableFunction = Instance.new("BindableFunction")
@@ -67,7 +68,6 @@ local function sendNotification(title, text, duration)
 end
 
 sendNotification("Sigma", "🎉 Sigma loaded! Enjoy! Press T to toggle aimbot, P to toggle ESP.", 8)
-print("[SIGMA]: Sigma.Aim v0.1.3 loaded! Yeeeeeeee")
 
 UserInputService.InputBegan:Connect(function(input, gameProcessedEvent)
     if not gameProcessedEvent then
@@ -89,23 +89,21 @@ UserInputService.InputBegan:Connect(function(input, gameProcessedEvent)
     end
 end)
 
-local function createOrUpdateESP(player)
+local function createESP(player)
     if espEnabled and player.PlayerModel then
-        if not espObjects[player] then
-            local highlight = Instance.new("Highlight")
-            highlight.Parent = player.PlayerModel.Model
-            highlight.FillColor = Color3.new(1, 0, 0)
-            highlight.FillTransparency = 0.3
-            highlight.OutlineColor = Color3.new(0.5, 0, 0)
-            highlight.OutlineTransparency = 0
+        local highlight = Instance.new("Highlight")
+        highlight.Parent = player.PlayerModel.Model
+        highlight.FillColor = Color3.new(1, 0, 0)
+        highlight.FillTransparency = 0.3
+        highlight.OutlineColor = Color3.new(0.5, 0, 0)
+        highlight.OutlineTransparency = 0
 
-            espObjects[player] = {highlight = highlight}
+        espObjects[player] = {highlight = highlight}
 
-            highlight.FillTransparency = 1
-            local tweenInfoIn = TweenInfo.new(1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
-            local tweenIn = TweenService:Create(highlight, tweenInfoIn, {FillTransparency = 0.3})
-            tweenIn:Play()
-        end
+        highlight.FillTransparency = 1
+        local tweenInfoIn = TweenInfo.new(1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+        local tweenIn = TweenService:Create(highlight, tweenInfoIn, {FillTransparency = 0.3})
+        tweenIn:Play()
     end
 end
 
@@ -123,22 +121,45 @@ local function cleanupESP(player)
     end
 end
 
+local function updateESP()
+    for _, player in next, Client.Players do
+        if player.PlayerModel and not player.Dead then
+            if not espObjects[player] then
+                createESP(player)
+            end
+        else
+            cleanupESP(player)
+        end
+    end
+end
+
+local function animateOutlineColor(highlight, targetColor)
+    local tweenInfo = TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+    local tween = TweenService:Create(highlight, tweenInfo, {OutlineColor = targetColor})
+    tween:Play()
+end
+
+local function updateTargetHighlight(target)
+    for player, data in pairs(espObjects) do
+        local highlight = data.highlight
+        if player == target then
+            animateOutlineColor(highlight, Color3.new(1, 0, 0))
+        else
+            animateOutlineColor(highlight, Color3.new(0.5, 0, 0))
+        end
+    end
+end
+
 Players.PlayerAdded:Connect(function(player)
     player.CharacterAdded:Connect(function(character)
         wait(1)
-        createOrUpdateESP(player)
+        createESP(player)
     end)
 end)
 
 game:GetService("RunService").RenderStepped:Connect(function()
     if espEnabled then
-        for _, player in next, Client.Players do
-            if player.PlayerModel and not player.Dead then
-                createOrUpdateESP(player)
-            else
-                cleanupESP(player)
-            end
-        end
+        updateESP()
     end
 end)
 
@@ -151,7 +172,14 @@ Fire = hookfunction(Client.Bullet.Fire, function(self, ...)
 
         if targetHitbox then
             args[2] = CFrame.new(Camera.CFrame.Position, targetHitbox.CFrame.Position).LookVector
+            if target ~= currentTarget then
+                currentTarget = target
+                updateTargetHighlight(target)
+            end
         end
+    else
+        currentTarget = nil
+        updateTargetHighlight(nil)
     end
 
     return Fire(self, unpack(args))
