@@ -2,54 +2,58 @@ local Camera = workspace.CurrentCamera
 local UserInputService = game:GetService('UserInputService')
 local Players = game:GetService('Players')
 local TweenService = game:GetService('TweenService')
+local RunService = game:GetService('RunService')
+
+if game.GameID == 2746687316 then
+    print("[SIGMA]: SigmaLoader V1: SIgma.Aim")
+else
+    error("[SIGMA]: wrong placee")
+end
 
 local Client = {}
-do
-    for _, v in next, getgc(true) do
-        if (type(v) == 'table') then
-            if (rawget(v, 'Fire') and type(rawget(v, 'Fire')) == 'function' and not Client.Bullet) then
-                Client.Bullet = v
-            elseif (rawget(v, 'HiddenUpdate')) then
-                Client.Players = debug.getupvalue(rawget(v, 'new'), 9)
-            end
+for _, v in next, getgc(true) do
+    if (type(v) == 'table') then
+        if (rawget(v, 'Fire') and type(rawget(v, 'Fire')) == 'function' and not Client.Bullet) then
+            Client.Bullet = v
+        elseif (rawget(v, 'HiddenUpdate')) then
+            Client.Players = debug.getupvalue(rawget(v, 'new'), 9)
         end
     end
+end
 
-    function Client:GetPlayerHitbox(player, hitbox)
-        for _, player_hitbox in next, player.Hitboxes do
-            if (player_hitbox._name == hitbox) then
-                return player_hitbox
-            end
+function Client:GetPlayerHitbox(player, hitbox)
+    for _, player_hitbox in next, player.Hitboxes do
+        if (player_hitbox._name == hitbox) then
+            return player_hitbox
         end
     end
+end
 
-    function Client:GetClosestPlayerFromCursor()
-        local nearest_player, min_magnitude = nil, math.huge
-
-        for _, player in next, Client.Players do
-            if player.PlayerModel and player.PlayerModel.Model.Head.Transparency ~= 1 then
-                local screen_pos, is_visible = Camera:WorldToViewportPoint(player.Position)
-                if is_visible then
-                    local magnitude = (UserInputService:GetMouseLocation() - Vector2.new(screen_pos.X, screen_pos.Y)).Magnitude
-                    if magnitude < min_magnitude then
-                        min_magnitude = magnitude
-                        nearest_player = player
-                    end
+function Client:GetClosestPlayerFromCursor()
+    local nearest_player, min_magnitude = nil, math.huge
+    for _, player in next, Client.Players do
+        if player.PlayerModel and player.PlayerModel.Model.Head.Transparency ~= 1 then
+            local screen_pos, is_visible = Camera:WorldToViewportPoint(player.Position)
+            if is_visible then
+                local magnitude = (UserInputService:GetMouseLocation() - Vector2.new(screen_pos.X, screen_pos.Y)).Magnitude
+                if magnitude < min_magnitude then
+                    min_magnitude = magnitude
+                    nearest_player = player
                 end
             end
         end
-        return nearest_player
     end
+    return nearest_player
+end
 
-    function Client:GetTargetHitbox(target)
-        for _, hitbox in next, {"Head", "Torso", "LeftArm", "RightArm"} do
-            local player_hitbox = Client:GetPlayerHitbox(target, hitbox)
-            if player_hitbox then
-                return player_hitbox
-            end
+function Client:GetTargetHitbox(target)
+    for _, hitbox in next, {"Head", "Torso", "LeftArm", "RightArm", "LeftLeg", "RightLeg"} do
+        local player_hitbox = Client:GetPlayerHitbox(target, hitbox)
+        if player_hitbox then
+            return player_hitbox
         end
-        return nil
     end
+    return nil
 end
 
 local botEnabled = true
@@ -67,7 +71,7 @@ local function sendNotification(title, text, duration)
     })
 end
 
-sendNotification("Sigma", "🎉 Sigma loaded! Enjoy! Press T to toggle aimbot, P to toggle ESP.", 8)
+sendNotification("Sigma", "🎉 SigmaAIM loaded! Press T to toggle aimbot, P to toggle ESP.", 8)
 
 UserInputService.InputBegan:Connect(function(input, gameProcessedEvent)
     if not gameProcessedEvent then
@@ -100,22 +104,19 @@ local function createESP(player)
 
         espObjects[player] = {highlight = highlight}
 
-        highlight.FillTransparency = 1
         local tweenInfoIn = TweenInfo.new(1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
         local tweenIn = TweenService:Create(highlight, tweenInfoIn, {FillTransparency = 0.3})
         tweenIn:Play()
+
+        local colorTweenInfo = TweenInfo.new(2, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1, true)
+        local colorTween = TweenService:Create(highlight, colorTweenInfo, {OutlineColor = Color3.new(1, 0, 0)})
+        colorTween:Play()
     end
 end
 
 local function cleanupESP(player)
     if espObjects[player] then
         local highlight = espObjects[player].highlight
-
-        local tweenInfoOut = TweenInfo.new(1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
-        local tweenOut = TweenService:Create(highlight, tweenInfoOut, {FillTransparency = 1})
-        tweenOut:Play()
-        tweenOut.Completed:Wait()
-
         highlight:Destroy()
         espObjects[player] = nil
     end
@@ -123,41 +124,39 @@ end
 
 local function updateESP()
     for _, player in next, Client.Players do
-        if player.PlayerModel and not player.Dead then
-            if not espObjects[player] then
-                createESP(player)
-            end
-        else
+        if player.PlayerModel and not player.Dead and not espObjects[player] then
+            createESP(player)
+        elseif not player.PlayerModel or player.Dead then
             cleanupESP(player)
         end
     end
-end
-
-local function animateOutlineColor(highlight, targetColor)
-    local tweenInfo = TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
-    local tween = TweenService:Create(highlight, tweenInfo, {OutlineColor = targetColor})
-    tween:Play()
 end
 
 local function updateTargetHighlight(target)
     for player, data in pairs(espObjects) do
         local highlight = data.highlight
         if player == target then
-            animateOutlineColor(highlight, Color3.new(1, 0, 0))
+            highlight.OutlineColor = Color3.new(1, 1, 0)
         else
-            animateOutlineColor(highlight, Color3.new(0.5, 0, 0))
+            highlight.OutlineColor = Color3.new(0.5, 0, 0)
         end
     end
 end
 
-Players.PlayerAdded:Connect(function(player)
+local function onPlayerAdded(player)
     player.CharacterAdded:Connect(function(character)
         wait(1)
         createESP(player)
     end)
-end)
+end
 
-game:GetService("RunService").RenderStepped:Connect(function()
+Players.PlayerAdded:Connect(onPlayerAdded)
+
+for _, player in ipairs(Players:GetPlayers()) do
+    onPlayerAdded(player)
+end
+
+RunService.RenderStepped:Connect(function()
     if espEnabled then
         updateESP()
     end
@@ -171,15 +170,16 @@ Fire = hookfunction(Client.Bullet.Fire, function(self, ...)
         local targetHitbox = target and Client:GetTargetHitbox(target)
 
         if targetHitbox then
-            args[2] = CFrame.new(Camera.CFrame.Position, targetHitbox.CFrame.Position).LookVector
-            if target ~= currentTarget then
-                currentTarget = target
-                updateTargetHighlight(target)
-            end
+            args[2] = (CFrame.new(Camera.CFrame.Position, targetHitbox.CFrame.Position)).LookVector
+            currentTarget = target
+            updateTargetHighlight(target)
+        else
+            currentTarget = nil
+            updateTargetHighlight(nil)
+            return
         end
     else
-        currentTarget = nil
-        updateTargetHighlight(nil)
+        return
     end
 
     return Fire(self, unpack(args))
