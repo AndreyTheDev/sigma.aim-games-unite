@@ -4,7 +4,7 @@ local Players = game:GetService('Players')
 local TweenService = game:GetService('TweenService')
 local RunService = game:GetService('RunService')
 
-if game.GameID == 2746687316 then
+if game.gameID == 2746687316 then
     print("[SIGMA]: SigmaLoader V1: SIgma.Aim")
 else
     error("[SIGMA]: wrong placee")
